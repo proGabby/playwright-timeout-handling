@@ -71,6 +71,10 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
+      name: 'local-chrome',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
       name: "chrome:latest:macOS Sonoma@lambdatest",
     },
     

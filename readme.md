@@ -83,7 +83,8 @@ await expect(async () => {
 
    ```typescript
    {
-      name: "chrome:latest:macOS Sonoma@lambdatest",
+      name: 'local-chrome',
+      use: { ...devices['Desktop Chrome'] },
     },
     
    ```
