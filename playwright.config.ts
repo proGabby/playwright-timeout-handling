@@ -12,7 +12,7 @@ const LT_ACCESS_KEY = process.env.LT_ACCESS_KEY;
 // Debug logging
 console.log('LambdaTest Configuration:');
 console.log('Username:', LT_USERNAME);
-console.log('Access Key:', LT_ACCESS_KEY?.substring(0, 5) + '...'); // Only show first 5 chars for security
+console.log('Access Key:', LT_ACCESS_KEY?.substring(0, 5) + '...'); 
 
 if (!LT_USERNAME || !LT_ACCESS_KEY) {
   console.error('Error: LambdaTest credentials not found. Make sure LT_USERNAME and LT_ACCESS_KEY are set in your .env file.');
@@ -30,6 +30,7 @@ const getLambdaTestConfig = (browserName, browserVersion = 'latest') => {
       platform: 'macOS Ventura',
       name: `Playwright Test - ${browserName}`,
       build: 'Playwright Build',
+      // networkThrottling: 'Regular 2G',
       visual: true,
       network: true,
       console: true,
@@ -70,14 +71,9 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: "Chrome:latest:macOS Sonoma@lambdatest",     
+      name: "chrome:latest:macOS Sonoma@lambdatest",
     },
+    
   ],
 
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://127.0.0.1:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });

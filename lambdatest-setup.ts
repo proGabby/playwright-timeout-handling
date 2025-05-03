@@ -1,21 +1,52 @@
 import * as base from "@playwright/test";
 import path from "path";
-import { chromium } from "@playwright/test"
+import { chromium, firefox, webkit } from "@playwright/test"
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 // LambdaTest capabilities
+// const capabilities = {
+//   browserName: "Chrome", // Browsers allowed: `Chrome`, `MicrosoftEdge`, `pw-chromium`, `pw-firefox` and `pw-webkit`
+//   browserVersion: "latest",
+//   "LT:Options": {
+//     platform: "Windows 11",
+//     build: "Playwright Time out",
+//     name: "Playwright Time out",
+//     user: process.env.LT_USERNAME,
+//     accessKey: process.env.LT_ACCESS_KEY,    
+//     network: true,
+//     video: true,
+//     console: true,
+//     tunnel: false,
+//     tunnelName: "",
+//     geoLocation: "",
+//     timezone: "",
+//     resolution: "1920x1080",
+//     deviceName: "",
+//     deviceOrientation: "",
+//     selenium_version: "4.0.0",
+//     driver_version: "latest",
+//     visual: true,
+//     smartUI: {
+//       projectName: "Playwright Time out",
+//       buildName: "Playwright Time out",
+//     }
+//   },
+// };
+
+// LambdaTest capabilities for 2G network
 const capabilities = {
   browserName: "Chrome", // Browsers allowed: `Chrome`, `MicrosoftEdge`, `pw-chromium`, `pw-firefox` and `pw-webkit`
   browserVersion: "latest",
   "LT:Options": {
     platform: "Windows 11",
-    build: "Playwright Time out",
-    name: "Playwright Time out",
+    build: "Playwright Time out (2G)",
+    name: "Playwright Time out (2G)",
     user: process.env.LT_USERNAME,
     accessKey: process.env.LT_ACCESS_KEY,    
     network: true,
+    networkThrottling: 'Regular 2G',
     video: true,
     console: true,
     tunnel: false,
@@ -29,8 +60,8 @@ const capabilities = {
     driver_version: "latest",
     visual: true,
     smartUI: {
-      projectName: "Playwright Time out",
-      buildName: "Playwright Time out",
+      projectName: "Playwright Time out (2G)",
+      buildName: "Playwright Time out (2G)",
     }
   },
 };
@@ -72,7 +103,23 @@ const getErrorMessage = (obj, keys) =>
           );
     
           console.log('Connecting to LambdaTest...');
-          browser = await chromium.connect({
+          
+          // Select the appropriate browser based on the project name
+          const browserName = testInfo.project.name.split(':')[0].toLowerCase();
+          let browserInstance;
+          
+          switch(browserName) {
+            case 'firefox':
+              browserInstance = firefox;
+              break;
+            case 'webkit':
+              browserInstance = webkit;
+              break;
+            default:
+              browserInstance = chromium;
+          }
+          
+          browser = await browserInstance.connect({
             wsEndpoint: `wss://cdp.lambdatest.com/playwright?capabilities=${encodeURIComponent(
               JSON.stringify(capabilities)
             )}`,
