@@ -83,15 +83,14 @@ await expect(async () => {
 
    ```typescript
    {
-      name: 'local-chrome',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    
+     name: 'local-chrome',
+     use: { ...devices['Desktop Chrome'] },
+   }
    ```
 
 2. **Run the tests**  
    ```bash
-   npx playwright test
+   npx playwright test --project=local-chrome
    ```
 
 ---
@@ -101,51 +100,63 @@ await expect(async () => {
 1. **Set up your `.env` file** with your LambdaTest credentials.
 
 2. **Configure the project**  
-   In `playwright.config.ts`, set up the `projects` array for LambdaTest:
+   In `playwright.config.ts`, the projects are configured for LambdaTest:
 
    ```typescript
-   {
-     name: "chrome:latest:macOS Sonoma@lambdatest",
-   }
+   projects: [
+     {
+       name: "chrome:latest:macOS Sonoma@lambdatest",
+     },
+     {
+       name: "pw-firefox:latest:macOS Sonoma@lambdatest",
+     },
+     {
+       name: "pw-webkit:latest:macOS Sonoma@lambdatest",
+     }
+   ]
    ```
 
-   Or for Windows:
+   Note: For LambdaTest, browser names must be prefixed with `pw-` for Firefox and WebKit.
 
-   ```typescript
-   {
-     name: "chrome:latest:Windows 10@lambdatest",
-   }
-   ```
-
-3. **Set network throttling (optional, for timeout scenarios):**  
-   In your LambdaTest capabilities (see `lambdatest-setup.ts`), add:
-
-   ```json
-   "networkThrottling": "Regular 2G"
-   ```
-
-   This will simulate a slow network for the test, making timeout scenarios more realistic.
-
-4. **Run the tests**  
+3. **Run tests on specific browsers**  
    ```bash
+   # Run on Chrome
    npx playwright test --project="chrome:latest:macOS Sonoma@lambdatest"
+
+   # Run on Firefox
+   npx playwright test --project="pw-firefox:latest:macOS Sonoma@lambdatest"
+
+   # Run on WebKit (Safari)
+   npx playwright test --project="pw-webkit:latest:macOS Sonoma@lambdatest"
+   ```
+
+4. **Run specific test files**  
+   ```bash
+   # Run a specific test file on Chrome
+   npx playwright test tests/progress-bar.spec.ts --project="chrome:latest:macOS Sonoma@lambdatest"
+
+   # Run all tests matching a pattern on Firefox
+   npx playwright test tests/*.spec.ts --project="pw-firefox:latest:macOS Sonoma@lambdatest"
    ```
 
 ---
 
 ## Network Throttling for Timeout Scenarios
 
-To simulate slow network conditions on LambdaTest, set the capability in your test setup:
+To simulate slow network conditions on LambdaTest, the configuration is set in `lambdatest-setup.ts`:
 
-```javascript
-"LT:Options": {
-  ...
-  "networkThrottling": "Regular 2G",
-  ...
-}
+```typescript
+const capabilities = {
+  // ...
+  "LT:Options": {
+    // ...
+    networkThrottling: 'Regular 2G',
+    // ...
+  }
+};
 ```
 
-This is especially useful for verifying that your timeout handling works as expected under real-world slow network conditions.
+This simulates a 2G network connection, making timeout scenarios more realistic.
 
 ---
 
@@ -153,15 +164,14 @@ This is especially useful for verifying that your timeout handling works as expe
 
 ```
 .
-├── playwright.config.ts
-├── lambdatest-setup.ts
-├── .env
+├── playwright.config.ts    # Playwright configuration
+├── lambdatest-setup.ts     # LambdaTest specific setup
+├── .env                    # Environment variables
 ├── package.json
 └── tests/
     ├── progress-bar.spec.ts
     ├── dynamic-content.spec.ts
-    ├── product-image-interaction.spec.ts
-    └── top-products-hover-throttle.spec.ts
+    └── product-image-interaction.spec.ts
 ```
 
 ---

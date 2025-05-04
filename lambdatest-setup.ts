@@ -6,47 +6,16 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // LambdaTest capabilities
-// const capabilities = {
-//   browserName: "Chrome", // Browsers allowed: `Chrome`, `MicrosoftEdge`, `pw-chromium`, `pw-firefox` and `pw-webkit`
-//   browserVersion: "latest",
-//   "LT:Options": {
-//     platform: "Windows 11",
-//     build: "Playwright Time out",
-//     name: "Playwright Time out",
-//     user: process.env.LT_USERNAME,
-//     accessKey: process.env.LT_ACCESS_KEY,    
-//     network: true,
-//     video: true,
-//     console: true,
-//     tunnel: false,
-//     tunnelName: "",
-//     geoLocation: "",
-//     timezone: "",
-//     resolution: "1920x1080",
-//     deviceName: "",
-//     deviceOrientation: "",
-//     selenium_version: "4.0.0",
-//     driver_version: "latest",
-//     visual: true,
-//     smartUI: {
-//       projectName: "Playwright Time out",
-//       buildName: "Playwright Time out",
-//     }
-//   },
-// };
-
-// LambdaTest capabilities for 2G network
 const capabilities = {
   browserName: "Chrome", // Browsers allowed: `Chrome`, `MicrosoftEdge`, `pw-chromium`, `pw-firefox` and `pw-webkit`
   browserVersion: "latest",
   "LT:Options": {
     platform: "Windows 11",
-    build: "Playwright Time out (2G)",
-    name: "Playwright Time out (2G)",
+    build: "Playwright Time out",
+    name: "Playwright Time out",
     user: process.env.LT_USERNAME,
     accessKey: process.env.LT_ACCESS_KEY,    
     network: true,
-    networkThrottling: 'Regular 2G',
     video: true,
     console: true,
     tunnel: false,
@@ -60,11 +29,42 @@ const capabilities = {
     driver_version: "latest",
     visual: true,
     smartUI: {
-      projectName: "Playwright Time out (2G)",
-      buildName: "Playwright Time out (2G)",
+      projectName: "Playwright Time out",
+      buildName: "Playwright Time out",
     }
   },
 };
+
+// LambdaTest capabilities for 2G network
+// const capabilities = {
+//   browserName: "Chrome", // Browsers allowed: `Chrome`, `MicrosoftEdge`, `pw-chromium`, `pw-firefox` and `pw-webkit`
+//   browserVersion: "latest",
+//   "LT:Options": {
+//     platform: "Windows 11",
+//     build: "Playwright Time out (2G)",
+//     name: "Playwright Time out (2G)",
+//     user: process.env.LT_USERNAME,
+//     accessKey: process.env.LT_ACCESS_KEY,    
+//     network: true,
+//     networkThrottling: 'Regular 2G',
+//     video: true,
+//     console: true,
+//     tunnel: false,
+//     tunnelName: "",
+//     geoLocation: "",
+//     timezone: "",
+//     resolution: "1920x1080",
+//     deviceName: "",
+//     deviceOrientation: "",
+//     selenium_version: "4.0.0",
+//     driver_version: "latest",
+//     visual: true,
+//     smartUI: {
+//       projectName: "Playwright Time out (2G)",
+//       buildName: "Playwright Time out (2G)",
+//     }
+//   },
+// };
 
 // Patching the capabilities dynamically according to the project name.
 const modifyCapabilities = (configName, testName) => {
@@ -109,10 +109,10 @@ const getErrorMessage = (obj, keys) =>
           let browserInstance;
           
           switch(browserName) {
-            case 'firefox':
+            case 'pw-firefox':
               browserInstance = firefox;
               break;
-            case 'webkit':
+            case 'pw-webkit':
               browserInstance = webkit;
               break;
             default:

@@ -77,7 +77,12 @@ export default defineConfig({
     {
       name: "chrome:latest:macOS Sonoma@lambdatest",
     },
-    
+    {
+      name: "pw-firefox:latest:macOS Sonoma@lambdatest",
+    },
+    {
+      name: "pw-webkit:latest:macOS Sonoma@lambdatest",
+    },
   ],
 
 });
