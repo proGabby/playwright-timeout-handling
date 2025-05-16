@@ -265,6 +265,7 @@ This simulates a 2G network connection, making timeout scenarios more realistic.
 
 ```
 .
+├── assets # Screenshots
 ├── playwright.config.ts    # Playwright configuration
 ├── lambdatest-setup.ts     # LambdaTest specific setup
 ├── .env                    # Environment variables
@@ -287,8 +288,6 @@ The following screenshot shows successful execution of Playwright timeout tests 
 - Tests were executed in parallel on Chrome, Firefox, and Safari.
 - Network throttling scenarios (2G) were included to simulate real-world slow network conditions.
 - Each build is clearly labeled for easy tracking and reporting.
-
-You can view the full project and test code on [GitHub](https://github.com/proGabby/playwright-timeout-handling).
 
 ---
 
