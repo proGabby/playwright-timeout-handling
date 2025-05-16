@@ -7,10 +7,17 @@ This repository demonstrates how to handle timeout errors in Playwright tests, w
 - [Prerequisites](#prerequisites)
 - [Environment Setup](#environment-setup)
 - [Test Scenarios](#test-scenarios)
-- [Handling Timeout Errors in Playwright](#handling-timeout-errors-in-playwright)
+- [Timeout Handling Examples](#timeout-handling-examples)
+  - [Progress Bar Timeout](#1-progress-bar-timeout-progress-barspects)
+  - [Dynamic Content Timeout](#2-dynamic-content-timeout-dynamic-contentspects)
+  - [Product Image Interaction](#3-product-image-interaction-product-image-interactionspects)
+  - [Best Practices](#best-practices-for-timeout-handling)
 - [Running Tests Locally](#running-tests-locally)
 - [Running Tests on LambdaTest Cloud Grid](#running-tests-on-lambdatest-cloud-grid)
-- [Network Throttling for Timeout Scenarios](#network-throttling-for-timeout-scenarios)
+  - [Browser Configuration](#configure-the-project)
+  - [Running Specific Browsers](#run-tests-on-specific-browsers)
+  - [Running Specific Tests](#run-specific-test-files)
+- [Network Throttling](#network-throttling-for-timeout-scenarios)
 - [Project Structure](#project-structure)
 - [References](#references)
 
@@ -57,6 +64,98 @@ This project includes the following test scenarios:
 
 - **Network Throttling**:  
   - Simulates slow network conditions (e.g., 2G) to test timeout scenarios more realistically, especially on LambdaTest.
+
+## Timeout Handling Examples
+
+Each test demonstrates different approaches to handling and managing timeouts:
+
+### 1. Progress Bar Timeout (progress-bar.spec.ts)
+```typescript
+test('should throw timeout when progress bar is slow', async ({ page }) => {
+  
+  // Try to wait for completion with a very short timeout
+  await expect(async () => {
+    await expect(page.locator('.progress-label')).toHaveText('Complete!', { timeout: 1000 });
+  }).rejects.toThrow();
+});
+```
+**How it handles the timeout:**
+- Sets a short timeout (1s) to simulate a slow operation
+- Uses `rejects.toThrow()` to catch and verify the timeout error
+
+
+### 2. Dynamic Content Timeout (dynamic-content.spec.ts)
+```typescript
+test('should throw timeout when dynamic content loads too late', async ({ page }) => {
+  // Click the button using role selector
+  await page.getByRole('button', { name: 'Get Random User' }).click();
+  
+  // Verify loading state
+  const loadingIndicator = page.getByText('Loading...');
+  await expect(loadingIndicator).toBeVisible();
+
+  // Assert timeout with specific error message
+  await expect(async () => {
+    await page.getByRole('img', { name: /random user/i }).waitFor({ timeout: 1000 });
+  }).rejects.toThrow('Timeout 1000ms exceeded');
+});
+```
+**How it handles the timeout:**
+- Uses role-based selectors for better accessibility
+- Verifies loading state before timeout
+- Uses `waitFor` with a short timeout to simulate slow content loading
+- Catches the specific timeout error message
+
+### 3. Product Image Interaction (product-image-interaction.spec.ts)
+```typescript
+test('should show product-action dialog on hover in Top Products', async ({ page }) => {
+  // Wait for the Top Products heading to be visible
+  const topProductsHeading = page.getByRole('heading', { name: 'Top Products' });
+  await expect(topProductsHeading).toBeVisible();
+
+  // Find the Top Products section and carousel
+  const topProductsSection = topProductsHeading.locator('xpath=ancestor::div[contains(@class,"entry-section")]');
+  const swiper = topProductsSection.locator('.mz-tab-listing .swiper-wrapper');
+  await expect(swiper).toBeVisible();
+
+  // Hover and verify dialog
+  const secondProduct = swiper.locator('.product-thumb.image-top').nth(1);
+  await secondProduct.hover();
+  const hoverDialog = secondProduct.locator('.product-action');
+  await expect(hoverDialog).toBeVisible();
+});
+```
+**How it handles the timeout:**
+- Uses role-based selectors for better accessibility
+- Implements a robust waiting strategy for dynamic content
+- Uses proper element hierarchy for reliable selection
+- Demonstrates proper error handling for interactive elements
+
+### Best Practices for Timeout Handling:
+
+1. **Selector Best Practices:**
+   - Use role-based selectors (`getByRole`) for better accessibility
+   - Use ID selectors for unique elements
+   - Use proper element hierarchy for reliable selection
+   - Avoid brittle selectors that might change
+
+2. **Timeout Configuration:**
+   - Use short timeouts (1s) for testing timeout behavior
+   - Use default timeouts (30s) for normal operations
+   - Set appropriate timeouts based on the operation type
+   - Consider network conditions when setting timeouts
+
+3. **Error Handling:**
+   - Use `rejects.toThrow()` for expected timeouts
+   - Verify loading states before timeout checks
+   - Implement proper error messages
+   - Handle both success and failure cases
+
+4. **Test Structure:**
+   - Use `test.describe` for grouping related tests
+   - Use `test.beforeEach` for common setup
+   - Keep tests focused and atomic
+   - Use clear, descriptive test names
 
 ---
 
