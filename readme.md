@@ -19,6 +19,8 @@ This repository demonstrates how to handle timeout errors in Playwright tests, w
   - [Running Specific Tests](#run-specific-test-files)
 - [Network Throttling](#network-throttling-for-timeout-scenarios)
 - [Project Structure](#project-structure)
+- [Test Execution on LambdaTest](#test-execution-on-lambdatest)
+- [Test Execution on Local Chrome](#test-execution-on-local-chrome)
 - [References](#references)
 
 ---
@@ -272,6 +274,33 @@ This simulates a 2G network connection, making timeout scenarios more realistic.
     ├── dynamic-content.spec.ts
     └── product-image-interaction.spec.ts
 ```
+
+---
+
+## Test Execution on LambdaTest
+
+The following screenshot shows successful execution of Playwright timeout tests on LambdaTest, including runs with network throttling (2G) and standard conditions. Each build demonstrates that the timeout handling logic works reliably across different network scenarios and browsers.
+
+![LambdaTest Execution Screenshot](./assets/lambda-playwright-build.png)
+
+- All builds passed, confirming robust timeout handling.
+- Tests were executed in parallel on Chrome, Firefox, and Safari.
+- Network throttling scenarios (2G) were included to simulate real-world slow network conditions.
+- Each build is clearly labeled for easy tracking and reporting.
+
+You can view the full project and test code on [GitHub](https://github.com/proGabby/playwright-timeout-handling).
+
+---
+
+## Test Execution on Local Chrome
+
+Below is a screenshot showing the summary of Playwright timeout tests executed locally on Chrome. All tests passed, demonstrating reliable timeout handling and UI interactions in a local environment.
+
+![Local Chrome Test Execution Summary](./assets/local-chrome-summary.png)
+
+- All test cases passed successfully.
+- Tests include dynamic content timeout, product image hover dialog, and progress bar timeout scenarios.
+- Confirms that the test suite is robust both locally and on the cloud.
 
 ---
 
