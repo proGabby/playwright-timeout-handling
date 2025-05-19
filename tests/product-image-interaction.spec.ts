@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Product Image Hover Dialog', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('https://ecommerce-playground.lambdatest.io/');
+  await page.goto('https://ecommerce-playground.lambdatest.io/');
   });
 
   test('should show product-action dialog on hover in Top Products', async ({ page }) => {

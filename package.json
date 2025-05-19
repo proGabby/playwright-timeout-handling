@@ -2,7 +2,10 @@
   "name": "playwright_timeout",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {},
+"scripts": {
+    "test:2g": "NETWORK_TYPE=2g playwright test",
+    "test:standard": "NETWORK_TYPE=standard playwright test"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

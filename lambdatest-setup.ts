@@ -5,8 +5,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// LambdaTest capabilities
-const capabilities = {
+// Get network type from environment variable
+const getNetworkType = () => {
+  const networkType = process.env.NETWORK_TYPE?.toLowerCase();
+  if (networkType === '2g' || networkType === 'standard') {
+    return networkType;
+  }
+  return 'standard'; // default to standard if not specified or invalid
+};
+
+// Base capabilities that will be shared
+const baseCapabilities = {
   browserName: "Chrome", // Browsers allowed: `Chrome`, `MicrosoftEdge`, `pw-chromium`, `pw-firefox` and `pw-webkit`
   browserVersion: "latest",
   "LT:Options": {
@@ -35,41 +44,37 @@ const capabilities = {
   },
 };
 
-// LambdaTest capabilities for 2G network
-// const capabilities = {
-//   browserName: "Chrome", // Browsers allowed: `Chrome`, `MicrosoftEdge`, `pw-chromium`, `pw-firefox` and `pw-webkit`
-//   browserVersion: "latest",
-//   "LT:Options": {
-//     platform: "Windows 11",
-//     build: "Playwright Time out (2G)",
-//     name: "Playwright Time out (2G)",
-//     user: process.env.LT_USERNAME,
-//     accessKey: process.env.LT_ACCESS_KEY,    
-//     network: true,
-//     networkThrottling: 'Regular 2G',
-//     video: true,
-//     console: true,
-//     tunnel: false,
-//     tunnelName: "",
-//     geoLocation: "",
-//     timezone: "",
-//     resolution: "1920x1080",
-//     deviceName: "",
-//     deviceOrientation: "",
-//     selenium_version: "4.0.0",
-//     driver_version: "latest",
-//     visual: true,
-//     smartUI: {
-//       projectName: "Playwright Time out (2G)",
-//       buildName: "Playwright Time out (2G)",
-//     }
-//   },
-// };
+// Standard capabilities without throttling
+export const standardCapabilities = {
+  ...baseCapabilities,
+  "LT:Options": {
+    ...baseCapabilities["LT:Options"],
+    name: "Playwright Time out (Standard Network)"
+  }
+};
+
+// Capabilities with 2G network throttling
+export const throttledCapabilities = {
+  ...baseCapabilities,
+  "LT:Options": {
+    ...baseCapabilities["LT:Options"],
+    networkThrottling: 'Regular 2G',
+    name: "Playwright Time out (2G Network)"
+  }
+};
+
+// Function to get capabilities based on network type
+export const getCapabilities = (networkType: 'standard' | '2g' = 'standard') => {
+  return networkType === '2g' ? throttledCapabilities : standardCapabilities;
+};
 
 // Patching the capabilities dynamically according to the project name.
 const modifyCapabilities = (configName, testName) => {
   let config = configName.split("@lambdatest")[0];
   let [browserName, browserVersion, platform] = config.split(":");
+  const networkType = getNetworkType();
+  const capabilities = getCapabilities(networkType);
+  
   capabilities.browserName = browserName
     ? browserName
     : capabilities.browserName;
@@ -80,6 +85,8 @@ const modifyCapabilities = (configName, testName) => {
     ? platform
     : capabilities["LT:Options"]["platform"];
   capabilities["LT:Options"]["name"] = testName;
+  
+  return capabilities;
 };
 
 const getErrorMessage = (obj, keys) =>
@@ -97,12 +104,13 @@ const getErrorMessage = (obj, keys) =>
         // Configure LambdaTest platform for cross-browser testing
         let fileName = testInfo.file.split(path.sep).pop();
         if (testInfo.project.name.match(/lambdatest/)) {
-          modifyCapabilities(
+          const capabilities = modifyCapabilities(
             testInfo.project.name,
             `${testInfo.title} - ${fileName}`
           );
     
           console.log('Connecting to LambdaTest...');
+          console.log('Using network type:', getNetworkType());
           
           // Select the appropriate browser based on the project name
           const browserName = testInfo.project.name.split(':')[0].toLowerCase();

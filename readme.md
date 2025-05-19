@@ -6,6 +6,7 @@ This repository demonstrates how to handle timeout errors in Playwright tests, w
 
 - [Prerequisites](#prerequisites)
 - [Environment Setup](#environment-setup)
+- [Available NPM Scripts](#available-npm-scripts)
 - [Test Scenarios](#test-scenarios)
 - [Timeout Handling Examples](#timeout-handling-examples)
   - [Progress Bar Timeout](#1-progress-bar-timeout-progress-barspects)
@@ -30,7 +31,7 @@ This repository demonstrates how to handle timeout errors in Playwright tests, w
 - **Node.js**: v20.16.0 or higher
 - **npm**: v10.8.2 or higher
 - **Playwright**: v1.52.0 or higher (tested on 1.52.0)
-- **LambdaTest Account**: [Sign up here](https://www.lambdatest.com?fp_ref=jaydeep88) for cloud grid testing
+- **LambdaTest Account**: [Sign up here](https://www.lambdatest.com?fp_ref=inimfonwillie) for cloud grid testing
 
 Install dependencies:
 ```bash
@@ -46,9 +47,41 @@ Create a `.env` file in the root directory with your LambdaTest credentials:
 ```
 LT_USERNAME=your_lambdatest_username
 LT_ACCESS_KEY=your_lambdatest_access_key
+NETWORK_TYPE=standard  # Optional: 'standard' or '2g'
 ```
 
-These credentials are required for running tests on LambdaTest.
+These credentials are required for running tests on LambdaTest. The `NETWORK_TYPE` environment variable is optional and defaults to 'standard' if not specified.
+
+---
+
+## Available NPM Scripts
+
+The project includes the following npm scripts for running tests with different network configurations:
+
+```json
+{
+  "scripts": {
+    "test:2g": "NETWORK_TYPE=2g playwright test",      # Run tests with 2G network throttling
+    "test:standard": "NETWORK_TYPE=standard playwright test"  # Run tests with standard network
+  }
+}
+```
+
+These scripts can be used in combination with other Playwright CLI options:
+
+```bash
+# Run all tests with 2G network
+npm run test:2g
+
+# Run all tests with standard network
+npm run test:standard
+
+# Run specific test file with 2G network
+npm run test:2g tests/network-throttling.spec.ts
+
+# Run tests on specific browser with 2G network
+npm run test:2g -- --project="chrome:latest:macOS Sonoma@lambdatest"
+```
 
 ---
 
@@ -161,22 +194,6 @@ test('should show product-action dialog on hover in Top Products', async ({ page
 
 ---
 
-## Handling Timeout Errors in Playwright
-
-Timeouts are a common source of flakiness in end-to-end tests. Playwright provides robust APIs to handle and assert on timeouts:
-
-```typescript
-await expect(async () => {
-  await expect(page.locator('.progress-label')).toHaveText('Complete!', { timeout: 1000 });
-}).rejects.toThrow('Timeout 1000ms exceeded');
-```
-
-- Use explicit timeouts in `waitForSelector`, `toHaveText`, etc.
-- Use `rejects.toThrow` to assert that a timeout error is thrown when expected.
-- For network throttling, set the capability `networkThrottling` in LambdaTest or use Playwright's CDP API locally.
-
----
-
 ## Running Tests Locally
 
 1. **Configure the project**  
@@ -221,43 +238,78 @@ await expect(async () => {
 
 3. **Run tests on specific browsers**  
    ```bash
-   # Run on Chrome
-   npx playwright test --project="chrome:latest:macOS Sonoma@lambdatest"
+   # Run on Chrome with standard network
+   npm run test:standard -- --project="chrome:latest:macOS Sonoma@lambdatest"
 
-   # Run on Firefox
-   npx playwright test --project="pw-firefox:latest:macOS Sonoma@lambdatest"
+   # Run on Firefox with 2G network
+   npm run test:2g -- --project="pw-firefox:latest:macOS Sonoma@lambdatest"
 
-   # Run on WebKit (Safari)
-   npx playwright test --project="pw-webkit:latest:macOS Sonoma@lambdatest"
+   # Run on WebKit (Safari) with standard network
+   npm run test:standard -- --project="pw-webkit:latest:macOS Sonoma@lambdatest"
    ```
 
 4. **Run specific test files**  
    ```bash
-   # Run a specific test file on Chrome
-   npx playwright test tests/progress-bar.spec.ts --project="chrome:latest:macOS Sonoma@lambdatest"
+   # Run network throttling tests with 2G network
+   npm run test:2g tests/network-throttling.spec.ts
 
-   # Run all tests matching a pattern on Firefox
-   npx playwright test tests/*.spec.ts --project="pw-firefox:latest:macOS Sonoma@lambdatest"
+   # Run progress bar tests with standard network
+   npm run test:standard tests/progress-bar.spec.ts
+
+   # Run all tests with 2G network
+   npm run test:2g
+
+   # Run all tests with standard network
+   npm run test:standard
    ```
 
 ---
 
 ## Network Throttling for Timeout Scenarios
 
-To simulate slow network conditions on LambdaTest, the configuration is set in `lambdatest-setup.ts`:
+The project includes two sets of capabilities for testing timeout scenarios:
 
-```typescript
-const capabilities = {
-  // ...
-  "LT:Options": {
-    // ...
-    networkThrottling: 'Regular 2G',
-    // ...
-  }
-};
+1. **Standard Network** (`standardCapabilities`): For normal network conditions
+2. **2G Network** (`throttledCapabilities`): For testing timeout scenarios with slow network
+
+To run tests with different network types, you can use the provided npm scripts:
+
+```bash
+# Run all tests with standard network
+npm run test:standard
+
+# Run all tests with 2G network throttling
+npm run test:2g
+
+# Run specific tests with 2G network
+npm run test:2g tests/network-throttling.spec.ts
+
+# Run specific tests with standard network
+npm run test:standard tests/network-throttling.spec.ts
 ```
 
-This simulates a 2G network connection, making timeout scenarios more realistic.
+You can also set the network type in your `.env` file:
+```
+NETWORK_TYPE=2g  # or 'standard'
+```
+
+The `network-throttling.spec.ts` file demonstrates:
+- Timeout handling with slow network conditions
+- Graceful error handling when timeouts occur
+- Verifying page usability after timeouts
+
+Example test:
+```typescript
+test('should timeout when loading content with 2G network', async ({ page }) => {
+  await page.goto('https://ecommerce-playground.lambdatest.io/');
+  await page.getByRole('heading', { name: 'iPhone' }).first().click();
+  
+  // Expect timeout when loading image
+  await expect(async () => {
+    await page.getByRole('img', { name: /iPhone/i }).waitFor({ timeout: 2000 });
+  }).rejects.toThrow('Timeout 2000ms exceeded');
+});
+```
 
 ---
 
@@ -268,27 +320,33 @@ This simulates a 2G network connection, making timeout scenarios more realistic.
 ├── playwright.config.ts    # Playwright configuration
 ├── lambdatest-setup.ts     # LambdaTest specific setup
 ├── .env                    # Environment variables
-├── package.json
+├── package.json           # Project dependencies and scripts
+├── assets/                # Test execution screenshots and images
+│   ├── lambda-playwright-build.png    # LambdaTest build execution screenshot
+│   ├── local-chrome-summary.png       # Local Chrome test execution summary
+│   ├── playwright_test_report_1.png   # HTML test report screenshot 1
+│   └── playwright_test_report_2.png   # HTML test report screenshot 2
 └── tests/
-    ├── progress-bar.spec.ts
-    ├── dynamic-content.spec.ts
-    └── product-image-interaction.spec.ts
+    ├── progress-bar.spec.ts           # Progress bar timeout tests
+    ├── dynamic-content.spec.ts        # Dynamic content loading tests
+    ├── product-image-interaction.spec.ts  # Product hover interaction tests
+    └── network-throttling.spec.ts     # Network throttling tests
 ```
 
 ---
 
 ## Test Execution on LambdaTest
 
-The following screenshot shows successful execution of Playwright timeout tests on LambdaTest, including runs with network throttling (2G) and standard conditions. Each build demonstrates that the timeout handling logic works reliably across different network scenarios and browsers.
+The following screenshots show successful execution of Playwright timeout tests on LambdaTest, including runs with network throttling (2G) and standard conditions. Each build demonstrates that the timeout handling logic works reliably across different network scenarios and browsers.
 
 ![LambdaTest Execution Screenshot](./assets/lambda-playwright-build.png)
+![LambdaTest Execution Screenshot](./assets/playwright_test_report_1.png)
+![LambdaTest Execution Screenshot](./assets/playwright_test_report_2.png)
 
 - All builds passed, confirming robust timeout handling.
 - Tests were executed in parallel on Chrome, Firefox, and Safari.
 - Network throttling scenarios (2G) were included to simulate real-world slow network conditions.
 - Each build is clearly labeled for easy tracking and reporting.
-
-You can view the full project and test code on [GitHub](https://github.com/proGabby/playwright-timeout-handling).
 
 ---
 
