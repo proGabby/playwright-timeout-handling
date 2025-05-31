@@ -34,7 +34,6 @@ const baseCapabilities = {
     resolution: "1920x1080",
     deviceName: "",
     deviceOrientation: "",
-    selenium_version: "4.0.0",
     driver_version: "latest",
     visual: true,
     smartUI: {
@@ -49,7 +48,8 @@ export const standardCapabilities = {
   ...baseCapabilities,
   "LT:Options": {
     ...baseCapabilities["LT:Options"],
-    name: "Playwright Time out (Standard Network)"
+    name: "Playwright Time out (Standard Network)",
+    selenium_version: "4.0.0",
   }
 };
 
@@ -59,12 +59,19 @@ export const throttledCapabilities = {
   "LT:Options": {
     ...baseCapabilities["LT:Options"],
     networkThrottling: 'Regular 2G',
-    name: "Playwright Time out (2G Network)"
+    name: "Playwright Time out (2G Network)",
+    build: "Playwright Time out (2G Network)",
+    smartUI: {
+      projectName: "Playwright Time out (2G Network)",
+      buildName: "Playwright Time out (2G Network",
+    }
   }
 };
 
+
 // Function to get capabilities based on network type
 export const getCapabilities = (networkType: 'standard' | '2g' = 'standard') => {
+  console.log('network type:', networkType);
   return networkType === '2g' ? throttledCapabilities : standardCapabilities;
 };
 

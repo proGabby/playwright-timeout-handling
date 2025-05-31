@@ -4,374 +4,306 @@ This repository demonstrates how to handle timeout errors in Playwright tests, w
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Environment Setup](#environment-setup)
-- [Available NPM Scripts](#available-npm-scripts)
-- [Test Scenarios](#test-scenarios)
-- [Timeout Handling Examples](#timeout-handling-examples)
-  - [Progress Bar Timeout](#1-progress-bar-timeout-progress-barspects)
-  - [Dynamic Content Timeout](#2-dynamic-content-timeout-dynamic-contentspects)
-  - [Product Image Interaction](#3-product-image-interaction-product-image-interactionspects)
-  - [Best Practices](#best-practices-for-timeout-handling)
-- [Running Tests Locally](#running-tests-locally)
-- [Running Tests on LambdaTest Cloud Grid](#running-tests-on-lambdatest-cloud-grid)
-  - [Browser Configuration](#configure-the-project)
-  - [Running Specific Browsers](#run-tests-on-specific-browsers)
-  - [Running Specific Tests](#run-specific-test-files)
-- [Network Throttling](#network-throttling-for-timeout-scenarios)
-- [Project Structure](#project-structure)
-- [Test Execution on LambdaTest](#test-execution-on-lambdatest)
-- [Test Execution on Local Chrome](#test-execution-on-local-chrome)
-- [References](#references)
+- [Quick Start](#-quick-start)
+  - [Prerequisites](#prerequisites)
+  - [Setup](#setup)
+  - [Run Tests](#run-tests)
+- [Test Scenarios: Failures vs Fixes](#-test-scenarios-failures-vs-fixes)
+  - [Dynamic Content Loading](#1-dynamic-content-loading-dynamic-contentspects)
+  - [Network-Dependent Timeouts](#2-network-dependent-timeouts-network-throttlingspects)
+  - [CSS Animation Timeouts](#3-css-animation-timeouts-product-image-interactionspects)
+  - [Progress Bar Completion](#4-progress-bar-completion-progress-barspects)
+- [Network Testing: Standard vs 2G](#-network-testing-standard-vs-2g)
+- [Project Structure](#️-project-structure)
+- [Browser Configuration](#️-browser-configuration)
+- [Test Execution Results](#-test-execution-results)
+- [Useful Resources](#-useful-resources)
+- [Ready to Master Timeouts?](#-ready-to-master-timeouts)
 
----
+## 📋 Quick Start
 
-## Prerequisites
+### Prerequisites
+- Node.js v20.16.0+
+- npm v10.8.2+
+- LambdaTest account ([get one free](https://www.lambdatest.com?fp_ref=inimfonwillie))
 
-- **Node.js**: v20.16.0 or higher
-- **npm**: v10.8.2 or higher
-- **Playwright**: v1.52.0 or higher (tested on 1.52.0)
-- **LambdaTest Account**: [Sign up here](https://www.lambdatest.com?fp_ref=inimfonwillie) for cloud grid testing
-
-Install dependencies:
+### Setup
 ```bash
 npm install
 ```
 
----
-
-## Environment Setup
-
-Create a `.env` file in the root directory with your LambdaTest credentials:
-
+Create `.env` file:
 ```
 LT_USERNAME=your_lambdatest_username
 LT_ACCESS_KEY=your_lambdatest_access_key
-NETWORK_TYPE=standard  # Optional: 'standard' or '2g'
+NETWORK_TYPE=standard  # or '2g' for slow network testing
 ```
 
-These credentials are required for running tests on LambdaTest. The `NETWORK_TYPE` environment variable is optional and defaults to 'standard' if not specified.
+### Run Tests
+```bash
+# Test with standard network
+npm run test:standard
+
+# Test with 2G network (slow)
+npm run test:2g
+
+# Run specific test file
+npm run test:standard tests/dynamic-content.spec.ts
+```
 
 ---
 
-## Available NPM Scripts
+## 🧪 Test Scenarios: Failures vs Fixes
 
-The project includes the following npm scripts for running tests with different network configurations:
+### 1. Dynamic Content Loading (`dynamic-content.spec.ts`)
 
-```json
-{
-  "scripts": {
-    "test:2g": "NETWORK_TYPE=2g playwright test",      # Run tests with 2G network throttling
-    "test:standard": "NETWORK_TYPE=standard playwright test"  # Run tests with standard network
-  }
+**The Challenge:** Web apps load user data from APIs. Sometimes it's fast, sometimes it's slow. Your tests need to handle both.
+
+#### ❌ **Failure Scenario: Impatient Timeout**
+```typescript
+// This WILL fail - only waits 200ms for API response
+await expect(async () => {
+  await page.locator('#loading img').waitFor({ timeout: 200 });
+}).rejects.toThrow(/Timeout 200ms exceeded/);
+```
+**What happens:** The API call takes longer than 200ms, test fails with timeout error.
+
+#### ✅ **Success Scenario: Progressive Timeout Strategy**
+```typescript
+// Phase 1: Wait for loading state (3 seconds)
+await expect(page.getByText('Loading...')).toBeVisible({ timeout: 3000 });
+
+// Phase 2: Wait for loading to disappear (8 seconds)
+await expect(page.getByText('Loading...')).toHaveCount(0, { timeout: 8000 });
+
+// Phase 3: Wait for image to appear in DOM (10 seconds)
+await userImage.waitFor({ state: 'attached', timeout: 10000 });
+
+// Phase 4: Verify it's visible (10 seconds)
+await expect(userImage).toBeVisible({ timeout: 10000 });
+```
+**Why it works:** Breaks down the waiting into logical phases, each with appropriate timeouts.
+
+**LambdaTest Execution:**
+![Dynamic Content Tests](./assets/dynamic_content.png)
+
+---
+
+### 2. Network-Dependent Timeouts (`network-throttling.spec.ts`)
+
+**The Challenge:** Your app works fine on fast WiFi, but what about users on slow mobile connections?
+
+#### ❌ **Failure Scenario: Standard Timeout on Slow Network**
+```typescript
+// This WILL fail on 2G network - timeout too short
+await expect(async () => {
+  await page.goto(ECOMMERCE_URL, { 
+    waitUntil: 'domcontentloaded',
+    timeout: 2000  // Only 2 seconds for 2G? No way!
+  });
+}).rejects.toThrow(/Timeout 2000ms exceeded/);
+```
+**What happens:** Page takes 10+ seconds to load on 2G, but we only wait 2 seconds.
+
+#### ✅ **Success Scenario: Network-Aware Timeouts**
+```typescript
+// Standard network: Fast loading (8 seconds max)
+await expect(productImages.first()).toBeVisible({ timeout: 8000 });
+expect(loadTime).toBeLessThan(10000);
+
+// 2G network: Patient loading (60 seconds max)
+await page.goto(ECOMMERCE_URL, {
+  waitUntil: 'domcontentloaded',
+  timeout: 60000  // Give 2G network time to breathe
+});
+await expect(productImages.first()).toBeVisible({ timeout: 30000 });
+```
+**Why it works:** Adjusts timeouts based on expected network conditions.
+
+**LambdaTest Execution:**
+![Network Throttling Tests](./assets/network_throttling_test.png)
+
+---
+
+### 3. CSS Animation Timeouts (`product-image-interaction.spec.ts`)
+
+**The Challenge:** Modern websites use CSS transitions. Hover effects, slide-downs, fade-ins - they all take time.
+
+#### ❌ **Failure Scenario: Ignoring Animation Time**
+```typescript
+// This WILL fail - CSS transition takes 300ms, we only wait 50ms
+await expect(async () => {
+  await targetProduct.hover({ timeout: 50 });
+  await expect(productAction).toBeVisible({ timeout: 50 });
+}).rejects.toThrow(/Timeout.*exceeded/);
+```
+**What happens:** CSS animation is still running when we check for visibility.
+
+#### ✅ **Success Scenario: Respecting Animation Timing**
+```typescript
+// Hover and wait for CSS transition to complete
+await targetProduct.hover();
+console.log('Hover initiated - slide-down animation starting');
+
+// Wait for CSS transition (300ms + buffer)
+await expect(productAction).toBeVisible({ timeout: 1000 });
+
+// Verify all action buttons appeared after animation
+const expectedButtons = ['Add to Cart', 'Add to Wish List', 'Quick view', 'Compare this Product'];
+for (const buttonTitle of expectedButtons) {
+  const actionButton = productAction.locator(`button[title="${buttonTitle}"]`);
+  await expect(actionButton).toBeVisible({ timeout: 2000 });
 }
 ```
+**Why it works:** Accounts for CSS transition time (300ms) plus network latency.
 
-These scripts can be used in combination with other Playwright CLI options:
+**LambdaTest Execution:**
+![Product Interaction Tests](./assets/hover_interaction.png)
 
+---
+
+### 4. Progress Bar Completion (`progress-bar.spec.ts`)
+
+**The Challenge:** Progress bars simulate long-running operations. How long should you wait?
+
+#### ❌ **Failure Scenario: Impatient Progress Waiting**
+```typescript
+// This WILL fail - progress bar takes ~20 seconds, we only wait 1 second
+await expect(async () => {
+  await expect(page.locator('.progress-label'))
+    .toHaveText('Complete!', { timeout: 1000 });
+}).rejects.toThrow(/Timed out/);
+```
+**What happens:** Progress simulation takes much longer than our timeout.
+
+#### ✅ **Success Scenario: Patient Progress Monitoring**
+```typescript
+// Click to start progress
+await page.click('#downloadButton');
+
+// Wait for progress to begin (10 seconds)
+await expect(page.locator('#progressbar')).toBeVisible({ timeout: 10000 });
+
+// Wait for completion with generous timeout (30 seconds)
+await expect(page.locator('.progress-label'))
+  .toHaveText('Complete!', { timeout: 30000 });
+```
+**Why it works:** Uses realistic timeouts for long-running operations.
+
+**LambdaTest Execution:**
+![Progress Bar Tests](./assets/progress_bar.png)
+
+---
+
+## 🌐 Network Testing: Standard vs 2G
+
+### Why Test Both Network Conditions?
+
+**Standard Network:** Tests normal user experience
+**2G Network:** Tests worst-case scenarios (rural areas, poor mobile coverage)
+
+### Running Network Tests
 ```bash
-# Run all tests with 2G network
-npm run test:2g
-
-# Run all tests with standard network
+# Test with fast network
 npm run test:standard
 
-# Run specific test file with 2G network
-npm run test:2g tests/network-throttling.spec.ts
-
-# Run tests on specific browser with 2G network
-npm run test:2g -- --project="chrome:latest:macOS Sonoma@lambdatest"
-```
-
----
-
-## Test Scenarios
-
-This project includes the following test scenarios:
-
-- **Timeout Handling**:  
-  - Verifies that Playwright throws a `TimeoutException` when dynamic content or progress bars take too long to load.
-  - Example: Waiting for a progress bar to complete or for dynamic content to appear, and asserting that a timeout error is thrown if it takes too long.
-
-- **Dynamic Content & Image Interactions**:  
-  - Interacts with dynamically-loaded images and content, both under normal and throttled network conditions.
-  - Example: Hovering over products and verifying that action dialogs appear.
-
-- **Network Throttling**:  
-  - Simulates slow network conditions (e.g., 2G) to test timeout scenarios more realistically, especially on LambdaTest.
-
-## Timeout Handling Examples
-
-Each test demonstrates different approaches to handling and managing timeouts:
-
-### 1. Progress Bar Timeout (progress-bar.spec.ts)
-```typescript
-test('should throw timeout when progress bar is slow', async ({ page }) => {
-  
-  // Try to wait for completion with a very short timeout
-  await expect(async () => {
-    await expect(page.locator('.progress-label')).toHaveText('Complete!', { timeout: 1000 });
-  }).rejects.toThrow();
-});
-```
-**How it handles the timeout:**
-- Sets a short timeout (1s) to simulate a slow operation
-- Uses `rejects.toThrow()` to catch and verify the timeout error
-
-
-### 2. Dynamic Content Timeout (dynamic-content.spec.ts)
-```typescript
-test('should throw timeout when dynamic content loads too late', async ({ page }) => {
-  // Click the button using role selector
-  await page.getByRole('button', { name: 'Get Random User' }).click();
-  
-  // Verify loading state
-  const loadingIndicator = page.getByText('Loading...');
-  await expect(loadingIndicator).toBeVisible();
-
-  // Assert timeout with specific error message
-  await expect(async () => {
-    await page.getByRole('img', { name: /random user/i }).waitFor({ timeout: 1000 });
-  }).rejects.toThrow('Timeout 1000ms exceeded');
-});
-```
-**How it handles the timeout:**
-- Uses role-based selectors for better accessibility
-- Verifies loading state before timeout
-- Uses `waitFor` with a short timeout to simulate slow content loading
-- Catches the specific timeout error message
-
-### 3. Product Image Interaction (product-image-interaction.spec.ts)
-```typescript
-test('should show product-action dialog on hover in Top Products', async ({ page }) => {
-  // Wait for the Top Products heading to be visible
-  const topProductsHeading = page.getByRole('heading', { name: 'Top Products' });
-  await expect(topProductsHeading).toBeVisible();
-
-  // Find the Top Products section and carousel
-  const topProductsSection = topProductsHeading.locator('xpath=ancestor::div[contains(@class,"entry-section")]');
-  const swiper = topProductsSection.locator('.mz-tab-listing .swiper-wrapper');
-  await expect(swiper).toBeVisible();
-
-  // Hover and verify dialog
-  const secondProduct = swiper.locator('.product-thumb.image-top').nth(1);
-  await secondProduct.hover();
-  const hoverDialog = secondProduct.locator('.product-action');
-  await expect(hoverDialog).toBeVisible();
-});
-```
-**How it handles the timeout:**
-- Uses role-based selectors for better accessibility
-- Implements a robust waiting strategy for dynamic content
-- Uses proper element hierarchy for reliable selection
-- Demonstrates proper error handling for interactive elements
-
-### Best Practices for Timeout Handling:
-
-1. **Selector Best Practices:**
-   - Use role-based selectors (`getByRole`) for better accessibility
-   - Use ID selectors for unique elements
-   - Use proper element hierarchy for reliable selection
-   - Avoid brittle selectors that might change
-
-2. **Timeout Configuration:**
-   - Use short timeouts (1s) for testing timeout behavior
-   - Use default timeouts (30s) for normal operations
-   - Set appropriate timeouts based on the operation type
-   - Consider network conditions when setting timeouts
-
-3. **Error Handling:**
-   - Use `rejects.toThrow()` for expected timeouts
-   - Verify loading states before timeout checks
-   - Implement proper error messages
-   - Handle both success and failure cases
-
-4. **Test Structure:**
-   - Use `test.describe` for grouping related tests
-   - Use `test.beforeEach` for common setup
-   - Keep tests focused and atomic
-   - Use clear, descriptive test names
-
----
-
-## Running Tests Locally
-
-1. **Configure the project**  
-   In `playwright.config.ts`, set up the `projects` array for your local browser:
-
-   ```typescript
-   {
-     name: 'local-chrome',
-     use: { ...devices['Desktop Chrome'] },
-   }
-   ```
-
-2. **Run the tests**  
-   ```bash
-   npx playwright test --project=local-chrome
-   ```
-
----
-
-## Running Tests on LambdaTest Cloud Grid
-
-1. **Set up your `.env` file** with your LambdaTest credentials.
-
-2. **Configure the project**  
-   In `playwright.config.ts`, the projects are configured for LambdaTest:
-
-   ```typescript
-   projects: [
-     {
-       name: "chrome:latest:macOS Sonoma@lambdatest",
-     },
-     {
-       name: "pw-firefox:latest:macOS Sonoma@lambdatest",
-     },
-     {
-       name: "pw-webkit:latest:macOS Sonoma@lambdatest",
-     }
-   ]
-   ```
-
-   Note: For LambdaTest, browser names must be prefixed with `pw-` for Firefox and WebKit.
-
-3. **Run tests on specific browsers**  
-   ```bash
-   # Run on Chrome with standard network
-   npm run test:standard -- --project="chrome:latest:macOS Sonoma@lambdatest"
-
-   # Run on Firefox with 2G network
-   npm run test:2g -- --project="pw-firefox:latest:macOS Sonoma@lambdatest"
-
-   # Run on WebKit (Safari) with standard network
-   npm run test:standard -- --project="pw-webkit:latest:macOS Sonoma@lambdatest"
-   ```
-
-4. **Run specific test files**  
-   ```bash
-   # Run network throttling tests with 2G network
-   npm run test:2g tests/network-throttling.spec.ts
-
-   # Run progress bar tests with standard network
-   npm run test:standard tests/progress-bar.spec.ts
-
-   # Run all tests with 2G network
-   npm run test:2g
-
-   # Run all tests with standard network
-   npm run test:standard
-   ```
-
----
-
-## Network Throttling for Timeout Scenarios
-
-The project includes two sets of capabilities for testing timeout scenarios:
-
-1. **Standard Network** (`standardCapabilities`): For normal network conditions
-2. **2G Network** (`throttledCapabilities`): For testing timeout scenarios with slow network
-
-To run tests with different network types, you can use the provided npm scripts:
-
-```bash
-# Run all tests with standard network
-npm run test:standard
-
-# Run all tests with 2G network throttling
+# Test with slow network (2G simulation)
 npm run test:2g
 
-# Run specific tests with 2G network
-npm run test:2g tests/network-throttling.spec.ts
-
-# Run specific tests with standard network
+# Compare both networks
 npm run test:standard tests/network-throttling.spec.ts
+npm run test:2g tests/network-throttling.spec.ts
 ```
 
-You can also set the network type in your `.env` file:
-```
-NETWORK_TYPE=2g  # or 'standard'
-```
-
-The `network-throttling.spec.ts` file demonstrates:
-- Timeout handling with slow network conditions
-- Graceful error handling when timeouts occur
-- Verifying page usability after timeouts
-
-Example test:
-```typescript
-test('should timeout when loading content with 2G network', async ({ page }) => {
-  await page.goto('https://ecommerce-playground.lambdatest.io/');
-  await page.getByRole('heading', { name: 'iPhone' }).first().click();
-  
-  // Expect timeout when loading image
-  await expect(async () => {
-    await page.getByRole('img', { name: /iPhone/i }).waitFor({ timeout: 2000 });
-  }).rejects.toThrow('Timeout 2000ms exceeded');
-});
-```
+### LambdaTest Network Throttling
+The tests automatically configure network throttling on LambdaTest:
+- **Standard:** No throttling
+- **2G:** `Regular 2G` throttling enabled
 
 ---
 
-## Project Structure
+## 🏗️ Project Structure
 
 ```
 .
-├── playwright.config.ts    # Playwright configuration
-├── lambdatest-setup.ts     # LambdaTest specific setup
-├── .env                    # Environment variables
-├── package.json           # Project dependencies and scripts
-├── assets/                # Test execution screenshots and images
-│   ├── lambda-playwright-build.png    # LambdaTest build execution screenshot
-│   ├── local-chrome-summary.png       # Local Chrome test execution summary
-│   ├── playwright_test_report_1.png   # HTML test report screenshot 1
-│   └── playwright_test_report_2.png   # HTML test report screenshot 2
-└── tests/
-    ├── progress-bar.spec.ts           # Progress bar timeout tests
-    ├── dynamic-content.spec.ts        # Dynamic content loading tests
-    ├── product-image-interaction.spec.ts  # Product hover interaction tests
-    └── network-throttling.spec.ts     # Network throttling tests
+├── tests/
+│   ├── dynamic-content.spec.ts        # API loading timeouts
+│   ├── network-throttling.spec.ts     # Network-aware timeouts  
+│   ├── product-image-interaction.spec.ts # CSS animation timeouts
+│   └── progress-bar.spec.ts           # Long operation timeouts
+├── lambdatest-setup.ts                # LambdaTest configuration
+├── playwright.config.ts               # Playwright settings
+├── package.json                       # Scripts and dependencies
+└── assets/                            # Execution screenshots
 ```
 
 ---
 
-## Test Execution on LambdaTest
+## 🎛️ Browser Configuration
 
-The following screenshots show successful execution of Playwright timeout tests on LambdaTest, including runs with network throttling (2G) and standard conditions. Each build demonstrates that the timeout handling logic works reliably across different network scenarios and browsers.
+### Local Testing
+```bash
+npx playwright test --project=local-chrome
+```
 
-![LambdaTest Execution Screenshot](./assets/lambda-playwright-build.png)
-![LambdaTest Execution Screenshot](./assets/playwright_test_report_1.png)
-![LambdaTest Execution Screenshot](./assets/playwright_test_report_2.png)
+### LambdaTest Cloud Testing
+```bash
+# Chrome on macOS
+npm run test:standard -- --project="chrome:latest:macOS Sonoma@lambdatest"
 
-- All builds passed, confirming robust timeout handling.
-- Tests were executed in parallel on Chrome, Firefox, and Safari.
-- Network throttling scenarios (2G) were included to simulate real-world slow network conditions.
-- Each build is clearly labeled for easy tracking and reporting.
+# Firefox on macOS  
+npm run test:standard -- --project="pw-firefox:latest:macOS Sonoma@lambdatest"
+
+# Safari on macOS
+npm run test:standard -- --project="pw-webkit:latest:macOS Sonoma@lambdatest"
+```
+
+
+## 📊 Test Execution Results
+
+### LambdaTest Cloud Execution
+All test scenarios executed successfully across multiple browsers and network conditions:
+
+![LambdaTest Cloud Execution](./assets/lamdatest_cloud_execution.gif)
+
+**Key Results:**
+- ✅ All timeout handling scenarios passed
+- ✅ Network throttling tests successful
+- ✅ Cross-browser compatibility confirmed
+- ✅ Both failure and success scenarios validated
+
+### HTML Test Reports
+Comprehensive test reports showing detailed execution results:
+
+![HTML Test Reports](./assets/hmtl_report.gif)
+
+
+**Local Test Summary:**
+- ✅ Dynamic content timeouts handled correctly
+- ✅ Product interaction animations working
+- ✅ Progress bar completion successful
+- ✅ Network simulation effective
 
 ---
 
-## Test Execution on Local Chrome
+## 🔗 Useful Resources
 
-Below is a screenshot showing the summary of Playwright timeout tests executed locally on Chrome. All tests passed, demonstrating reliable timeout handling and UI interactions in a local environment.
-
-![Local Chrome Test Execution Summary](./assets/local-chrome-summary.png)
-
-- All test cases passed successfully.
-- Tests include dynamic content timeout, product image hover dialog, and progress bar timeout scenarios.
-- Confirms that the test suite is robust both locally and on the cloud.
+- [Playwright Timeout Documentation](https://playwright.dev/docs/test-timeouts)
+- [Playwright Locator Documentation](https://playwright.dev/docs/api/class-locator#locator-wait-for)
+- [LambdaTest Playwright Setup](https://www.lambdatest.com/support/docs/playwright-testing/)
+- [Capabilities Generator](https://www.lambdatest.com/capabilities-generator/)
 
 ---
 
-## References
+## 🚀 Ready to Master Timeouts?
 
-- [Playwright Timeout Handling](https://playwright.dev/docs/api/class-locator#locator-wait-for)
-- [LambdaTest Playwright Capabilities](https://www.lambdatest.com/support/docs/playwright-automation-capabilities/)
-- [LambdaTest Network Throttling](https://www.lambdatest.com/support/docs/network-throttling-in-playwright/)
-- [LambdaTest Capabilities Generator](https://www.lambdatest.com/capabilities-generator/)
+1. **Clone this repository**
+2. **Set up your LambdaTest credentials**
+3. **Run the tests and see failures vs successes**
+4. **Apply these patterns to your own tests**
 
----
+Remember: Good timeout handling isn't just about making tests pass - it's about creating reliable automation that works in the real world, on real networks, with real user conditions.
 
-**Happy Testing!**  
-For any issues, please open an issue.
+**Happy Testing!** 🎭
 
 

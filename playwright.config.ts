@@ -19,30 +19,6 @@ if (!LT_USERNAME || !LT_ACCESS_KEY) {
   process.exit(1);
 }
 
-// Common LambdaTest capability builder function
-const getLambdaTestConfig = (browserName, browserVersion = 'latest') => {
-  const capabilities = {
-    browserName,
-    browserVersion,
-    'LT:Options': {
-      username: LT_USERNAME,
-      accessKey: LT_ACCESS_KEY,
-      platform: 'macOS Ventura',
-      name: `Playwright Test - ${browserName}`,
-      build: 'Playwright Build',
-      // networkThrottling: 'Regular 2G',
-      visual: true,
-      network: true,
-      console: true,
-    },
-  };
-
-  return {
-    connectOptions: {
-      wsEndpoint: `wss://cdp.lambdatest.com/playwright?capabilities=${encodeURIComponent(JSON.stringify(capabilities))}`,
-    },
-  };
-};
 
 /**
  * See https://playwright.dev/docs/test-configuration.
